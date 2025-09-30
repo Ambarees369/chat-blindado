@@ -1,8 +1,8 @@
 [phases.setup]
-nixPkgs = ["nodejs-20_x", "npm-10_x"]
+nixPkgs = ["nodejs_20", "openssl"]
 
 [phases.install]
-cmds = ["npm ci --prefer-offline --no-audit"]
+cmds = ["npm ci"]
 
 [start]
 cmd = "node server.js"
