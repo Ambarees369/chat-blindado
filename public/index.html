@@ -146,3 +146,267 @@
                         <input
                             type="text"
                             id="username-input"
+                            placeholder="Tu nombre de usuario"
+                            class="w-full bg-slate-700/50 text-white px-4 py-3 rounded-lg mb-4 border border-slate-600 focus:border-purple-500 focus:outline-none"
+                        />
+
+                        <input
+                            type="text"
+                            id="room-input"
+                            placeholder="Nombre de la sala"
+                            class="w-full bg-slate-700/50 text-white px-4 py-3 rounded-lg mb-6 border border-slate-600 focus:border-purple-500 focus:outline-none"
+                        />
+
+                        <button
+                            id="join-btn"
+                            class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg"
+                        >
+                            Unirse al Chat Seguro
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderChat() {
+            const hasPartners = partnerKeys.size > 0;
+            
+            return `
+                <div class="min-h-screen flex flex-col">
+                    <div class="bg-slate-800/80 backdrop-blur-xl border-b border-purple-500/20 p-4">
+                        <div class="max-w-4xl mx-auto flex items-center justify-between">
+                            <div class="flex items-center">
+                                <svg class="text-purple-400 mr-3" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                </svg>
+                                <div>
+                                    <h2 class="text-xl font-bold text-white">Sala: ${room}</h2>
+                                    <p class="text-purple-300 text-sm">${username} • E2EE Activo</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center gap-2">
+                                <div class="w-3 h-3 rounded-full ${hasPartners ? 'bg-green-400' : 'bg-yellow-400'} animate-pulse"></div>
+                                <span class="text-sm text-white">
+                                    ${hasPartners ? `${partnerKeys.size} contacto(s)` : 'Esperando...'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto p-4" id="messages-container">
+                        <div class="max-w-4xl mx-auto space-y-4">
+                            ${messages.length === 0 ? `
+                                <div class="text-center text-purple-300 py-12">
+                                    <svg class="mx-auto mb-4 opacity-50" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                    </svg>
+                                    <p>Todos los mensajes están encriptados end-to-end</p>
+                                    <p class="text-sm mt-2 opacity-75">Solo tú y tus contactos pueden leerlos</p>
+                                </div>
+                            ` : messages.map(msg => `
+                                <div class="flex ${msg.isMine ? 'justify-end' : 'justify-start'}">
+                                    <div class="max-w-md ${msg.isMine ? 'bg-purple-600' : 'bg-slate-700'} rounded-2xl p-4 shadow-lg">
+                                        <div class="flex items-center mb-1">
+                                            <span class="font-semibold text-sm ${msg.isMine ? 'text-purple-200' : 'text-purple-300'}">
+                                                ${escapeHtml(msg.username)}
+                                            </span>
+                                            <svg class="ml-2 ${msg.isMine ? 'text-purple-300' : 'text-green-400'}" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                                            </svg>
+                                        </div>
+                                        <p class="text-white break-words">${escapeHtml(msg.message)}</p>
+                                        <p class="text-xs mt-2 ${msg.isMine ? 'text-purple-200' : 'text-slate-400'}">
+                                            ${new Date(msg.timestamp).toLocaleTimeString()}
+                                        </p>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-800/80 backdrop-blur-xl border-t border-purple-500/20 p-4">
+                        <div class="max-w-4xl mx-auto">
+                            ${!hasPartners ? `
+                                <div class="mb-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 text-yellow-300 text-sm">
+                                    ⚠️ Esperando que alguien se conecte a la sala...
+                                </div>
+                            ` : ''}
+                            
+                            <div class="flex gap-2">
+                                <input
+                                    type="text"
+                                    id="message-input"
+                                    placeholder="${hasPartners ? 'Escribe un mensaje encriptado...' : 'Esperando contactos...'}"
+                                    ${!hasPartners ? 'disabled' : ''}
+                                    class="flex-1 bg-slate-700/50 text-white px-4 py-3 rounded-lg border border-slate-600 focus:border-purple-500 focus:outline-none disabled:opacity-50"
+                                />
+                                <button
+                                    id="send-btn"
+                                    ${!hasPartners ? 'disabled' : ''}
+                                    class="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Enviar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function scrollToBottom() {
+            setTimeout(() => {
+                const container = document.getElementById('messages-container');
+                if (container) {
+                    container.scrollTop = container.scrollHeight;
+                }
+            }, 100);
+        }
+
+        function attachEventListeners() {
+            const joinBtn = document.getElementById('join-btn');
+            const sendBtn = document.getElementById('send-btn');
+            const usernameInput = document.getElementById('username-input');
+            const roomInput = document.getElementById('room-input');
+            const messageInput = document.getElementById('message-input');
+
+            if (joinBtn) {
+                joinBtn.onclick = async () => {
+                    const usernameVal = usernameInput.value.trim();
+                    const roomVal = roomInput.value.trim();
+                    
+                    if (usernameVal && roomVal) {
+                        username = usernameVal;
+                        room = roomVal;
+                        await joinChat();
+                    }
+                };
+
+                if (usernameInput) {
+                    usernameInput.onkeypress = (e) => {
+                        if (e.key === 'Enter') joinBtn.click();
+                    };
+                }
+                
+                if (roomInput) {
+                    roomInput.onkeypress = (e) => {
+                        if (e.key === 'Enter') joinBtn.click();
+                    };
+                }
+            }
+
+            if (sendBtn && messageInput) {
+                sendBtn.onclick = sendMessage;
+                messageInput.onkeypress = (e) => {
+                    if (e.key === 'Enter') sendMessage();
+                };
+            }
+        }
+
+        async function joinChat() {
+            keys = await generateKeyPair();
+            socket = io(SERVER_URL);
+            
+            socket.emit('join-room', {
+                room,
+                username,
+                publicKey: keys.publicKey
+            });
+
+            socket.on('existing-keys', (existingKeys) => {
+                existingKeys.forEach(user => {
+                    partnerKeys.set(user.username, user.publicKey);
+                });
+                render();
+            });
+
+            socket.on('new-public-key', (data) => {
+                partnerKeys.set(data.username, data.publicKey);
+                render();
+            });
+
+            socket.on('encrypted-message', async (data) => {
+                const decrypted = await decryptMessage(data.encryptedMessage, keys.privateKey);
+                messages.push({
+                    username: data.username,
+                    message: decrypted,
+                    timestamp: data.timestamp,
+                    isMine: false
+                });
+                render();
+            });
+
+            socket.on('user-joined', (data) => {
+                messages.push({
+                    username: 'Sistema',
+                    message: `${data.username} se unió al chat`,
+                    timestamp: data.timestamp,
+                    isMine: false
+                });
+                render();
+            });
+
+            socket.on('user-left', (data) => {
+                partnerKeys.delete(data.username);
+                messages.push({
+                    username: 'Sistema',
+                    message: `${data.username} dejó el chat`,
+                    timestamp: data.timestamp,
+                    isMine: false
+                });
+                render();
+            });
+
+            render();
+        }
+
+        async function sendMessage() {
+            const messageInput = document.getElementById('message-input');
+            const text = messageInput.value.trim();
+            
+            if (!text || partnerKeys.size === 0) return;
+
+            const firstPartnerKey = Array.from(partnerKeys.values())[0];
+            const encrypted = await encryptMessage(text, firstPartnerKey);
+
+            if (encrypted) {
+                const timestamp = new Date().toISOString();
+
+                socket.emit('encrypted-message', {
+                    room,
+                    username,
+                    encryptedMessage: encrypted,
+                    timestamp
+                });
+
+                messages.push({
+                    username,
+                    message: text,
+                    timestamp,
+                    isMine: true
+                });
+
+                messageInput.value = '';
+                render();
+            }
+        }
+
+        render();
+    </script>
+</body>
+</html>
