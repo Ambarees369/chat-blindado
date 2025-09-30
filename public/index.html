@@ -9,9 +9,140 @@
 </head>
 <body class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
     <div id="app"></div>
+
     <script>
-        // Aquí va todo el código JavaScript del cliente
-        // (Es el mismo código del artefacto HTML que te mostré antes)
-    </script>
-</body>
-</html>
+        let socket = null;
+        let keys = null;
+        let username = '';
+        let room = '';
+        let partnerKeys = new Map();
+        let messages = [];
+
+        const SERVER_URL = window.location.origin;
+
+        async function generateKeyPair() {
+            const keyPair = await window.crypto.subtle.generateKey(
+                {
+                    name: "RSA-OAEP",
+                    modulusLength: 2048,
+                    publicExponent: new Uint8Array([1, 0, 1]),
+                    hash: "SHA-256",
+                },
+                true,
+                ["encrypt", "decrypt"]
+            );
+
+            const publicKey = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
+            const privateKey = await window.crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
+
+            return {
+                publicKey: arrayBufferToBase64(publicKey),
+                privateKey: arrayBufferToBase64(privateKey),
+                keyPair: keyPair
+            };
+        }
+
+        function arrayBufferToBase64(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binary = window.atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+                bytes[i] = binary.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        async function encryptMessage(text, publicKeyBase64) {
+            try {
+                const publicKeyBuffer = base64ToArrayBuffer(publicKeyBase64);
+                const publicKey = await window.crypto.subtle.importKey(
+                    "spki",
+                    publicKeyBuffer,
+                    { name: "RSA-OAEP", hash: "SHA-256" },
+                    true,
+                    ["encrypt"]
+                );
+
+                const encoder = new TextEncoder();
+                const data = encoder.encode(text);
+                const encrypted = await window.crypto.subtle.encrypt(
+                    { name: "RSA-OAEP" },
+                    publicKey,
+                    data
+                );
+
+                return arrayBufferToBase64(encrypted);
+            } catch (error) {
+                console.error("Error encriptando:", error);
+                return null;
+            }
+        }
+
+        async function decryptMessage(encryptedBase64, privateKeyBase64) {
+            try {
+                const privateKeyBuffer = base64ToArrayBuffer(privateKeyBase64);
+                const privateKey = await window.crypto.subtle.importKey(
+                    "pkcs8",
+                    privateKeyBuffer,
+                    { name: "RSA-OAEP", hash: "SHA-256" },
+                    true,
+                    ["decrypt"]
+                );
+
+                const encryptedBuffer = base64ToArrayBuffer(encryptedBase64);
+                const decrypted = await window.crypto.subtle.decrypt(
+                    { name: "RSA-OAEP" },
+                    privateKey,
+                    encryptedBuffer
+                );
+
+                const decoder = new TextDecoder();
+                return decoder.decode(decrypted);
+            } catch (error) {
+                console.error("Error desencriptando:", error);
+                return "[Mensaje encriptado]";
+            }
+        }
+
+        function render() {
+            const app = document.getElementById('app');
+            
+            if (!keys) {
+                app.innerHTML = renderLogin();
+            } else {
+                app.innerHTML = renderChat();
+            }
+            
+            attachEventListeners();
+            scrollToBottom();
+        }
+
+        function renderLogin() {
+            return `
+                <div class="min-h-screen flex items-center justify-center p-4">
+                    <div class="bg-slate-800/70 backdrop-blur-xl p-8 rounded-2xl shadow-2xl max-w-md w-full border border-purple-500/30">
+                        <div class="flex items-center justify-center mb-6">
+                            <svg class="text-purple-400 mr-3" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                            <h1 class="text-3xl font-bold text-white">Chat Blindado</h1>
+                        </div>
+                        
+                        <div class="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4 mb-6">
+                            <p class="text-purple-200 text-sm">
+                                🔒 Encriptación end-to-end con RSA-2048. Ni el servidor puede leer tus mensajes.
+                            </p>
+                        </div>
+
+                        <input
+                            type="text"
+                            id="username-input"
